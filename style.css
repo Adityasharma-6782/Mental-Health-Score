@@ -96,6 +96,28 @@ body {
   color: var(--pine);
 }
 
+.header-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.brand-logo {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.brand-logo img {
+  width: 200px;
+  height: 200px;
+  border-radius: 18px;
+  object-fit: contain;
+  box-shadow: none;
+  background: transparent;
+  border: none;
+}
+
 .subtitle {
   max-width: 560px;
   font-size: 16px;
