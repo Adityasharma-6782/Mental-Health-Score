@@ -225,7 +225,8 @@ curl -X POST "http://127.0.0.1:8000/predict" \
 
 ## Screenshots
 
-> <img width="70%" height="53%" alt="image" src="https://github.com/user-attachments/assets/199935f0-38bf-42a3-8680-99247490705c" />
+> <img width="887" height="1163" alt="image" src="https://github.com/user-attachments/assets/d82085d1-0a4b-4139-be31-e9c66a22fc45" />
+
 
 
 ## Roadmap
