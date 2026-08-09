@@ -5,13 +5,17 @@ import pandas as pd
 from typing import Literal, Optional
 import joblib
 from fastapi.middleware.cors import CORSMiddleware
-import json
 import os
 import re
 import uuid
 import secrets
 import bcrypt
 from datetime import datetime, timedelta
+from pymongo import MongoClient
+from pymongo.errors import ConnectionFailure
+from dotenv import load_dotenv
+
+load_dotenv()  # reads variables from a local .env file, if present
 
 app = FastAPI()
 
@@ -27,14 +31,33 @@ app.add_middleware(
 model = joblib.load('Mental_Health_Model.pkl')
 
 # =========================================================
-# AUTH SETUP
+# AUTH SETUP — MongoDB
 # =========================================================
-DATA_DIR = "data"
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
-SESSIONS_FILE = os.path.join(DATA_DIR, "sessions.json")
+MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
+MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "mental_health_signal")
 SESSION_LIFETIME_DAYS = 7
 
 EMAIL_REGEX = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+mongo_client = MongoClient(MONGODB_URI)
+
+try:
+    mongo_client.admin.command("ping")
+except ConnectionFailure as e:
+    raise RuntimeError(
+        f"Could not connect to MongoDB at '{MONGODB_URI}'. "
+        f"Check that MongoDB is running and MONGODB_URI is correct."
+    ) from e
+
+db = mongo_client[MONGODB_DB_NAME]
+users_col = db["users"]
+sessions_col = db["sessions"]
+
+# unique index on email so duplicate registrations can't slip through
+users_col.create_index("email", unique=True)
+# sessions expire automatically once expires_at (a real datetime) is in the past
+sessions_col.create_index("token", unique=True)
+sessions_col.create_index("expires_at", expireAfterSeconds=0)
 
 
 def hash_password(password: str) -> str:
@@ -51,47 +74,18 @@ def verify_password(password: str, password_hash: str) -> bool:
         return False
 
 
-def _ensure_data_files():
-    os.makedirs(DATA_DIR, exist_ok=True)
-    if not os.path.exists(USERS_FILE):
-        with open(USERS_FILE, "w") as f:
-            json.dump([], f)
-    if not os.path.exists(SESSIONS_FILE):
-        with open(SESSIONS_FILE, "w") as f:
-            json.dump({}, f)
-
-
-def _load_json(path):
-    with open(path, "r") as f:
-        return json.load(f)
-
-
-def _save_json(path, data):
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2, default=str)
-
-
-_ensure_data_files()
-
-
 def get_user_by_email(email: str):
-    users = _load_json(USERS_FILE)
-    email_lower = email.strip().lower()
-    for u in users:
-        if u["email"].lower() == email_lower:
-            return u
-    return None
+    return users_col.find_one({"email": email.strip().lower()})
 
 
 def create_session(email: str) -> str:
-    sessions = _load_json(SESSIONS_FILE)
     token = secrets.token_hex(32)
-    sessions[token] = {
+    sessions_col.insert_one({
+        "token": token,
         "email": email.strip().lower(),
-        "created_at": datetime.utcnow().isoformat(),
-        "expires_at": (datetime.utcnow() + timedelta(days=SESSION_LIFETIME_DAYS)).isoformat(),
-    }
-    _save_json(SESSIONS_FILE, sessions)
+        "created_at": datetime.utcnow(),
+        "expires_at": datetime.utcnow() + timedelta(days=SESSION_LIFETIME_DAYS),
+    })
     return token
 
 
@@ -100,15 +94,13 @@ def get_current_user(authorization: Optional[str] = Header(None)):
         raise HTTPException(status_code=401, detail="Not authenticated")
 
     token = authorization.split(" ", 1)[1]
-    sessions = _load_json(SESSIONS_FILE)
-    session = sessions.get(token)
+    session = sessions_col.find_one({"token": token})
 
     if not session:
         raise HTTPException(status_code=401, detail="Invalid or expired session")
 
-    if datetime.fromisoformat(session["expires_at"]) < datetime.utcnow():
-        del sessions[token]
-        _save_json(SESSIONS_FILE, sessions)
+    if session["expires_at"] < datetime.utcnow():
+        sessions_col.delete_one({"token": token})
         raise HTTPException(status_code=401, detail="Session expired, please log in again")
 
     user = get_user_by_email(session["email"])
@@ -124,7 +116,14 @@ def public_user(user: dict) -> dict:
         "first_name": user["first_name"],
         "last_name": user["last_name"],
         "email": user["email"],
+        "is_admin": user.get("is_admin", False),
     }
+
+
+def require_admin(current_user: dict = Depends(get_current_user)) -> dict:
+    if not current_user.get("is_admin", False):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return current_user
 
 
 # ---------- request models ----------
@@ -196,17 +195,16 @@ def register(data: RegisterRequest):
     if errors:
         return JSONResponse(status_code=400, content={"errors": errors})
 
-    users = _load_json(USERS_FILE)
     new_user = {
         "id": str(uuid.uuid4()),
         "first_name": data.first_name.strip(),
         "last_name": data.last_name.strip(),
         "email": data.email.strip().lower(),
         "password_hash": hash_password(data.password),
-        "created_at": datetime.utcnow().isoformat(),
+        "created_at": datetime.utcnow(),
+        "is_admin": users_col.count_documents({}) == 0,  # first registered user becomes admin
     }
-    users.append(new_user)
-    _save_json(USERS_FILE, users)
+    users_col.insert_one(new_user)
 
     token = create_session(new_user["email"])
     return {
@@ -246,11 +244,51 @@ def me(current_user: dict = Depends(get_current_user)):
 def logout(authorization: Optional[str] = Header(None)):
     if authorization and authorization.startswith("Bearer "):
         token = authorization.split(" ", 1)[1]
-        sessions = _load_json(SESSIONS_FILE)
-        if token in sessions:
-            del sessions[token]
-            _save_json(SESSIONS_FILE, sessions)
+        sessions_col.delete_one({"token": token})
     return {"message": "Logged out."}
+
+
+# =========================================================
+# ADMIN ROUTES (admin-only)
+# =========================================================
+@app.get("/admin/users")
+def admin_list_users(current_admin: dict = Depends(require_admin)):
+    users = users_col.find({})
+    result = []
+    for u in users:
+        entry = public_user(u)
+        entry["created_at"] = u["created_at"].isoformat() if isinstance(u["created_at"], datetime) else u["created_at"]
+        result.append(entry)
+    return result
+
+
+@app.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: str, current_admin: dict = Depends(require_admin)):
+    target = users_col.find_one({"id": user_id})
+
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if target["email"] == current_admin["email"]:
+        raise HTTPException(status_code=400, detail="You can't delete your own account.")
+
+    users_col.delete_one({"id": user_id})
+    sessions_col.delete_many({"email": target["email"]})
+
+    return {"message": f"Deleted {target['email']}."}
+
+
+@app.get("/admin/sessions")
+def admin_list_sessions(current_admin: dict = Depends(require_admin)):
+    sessions = sessions_col.find({})
+    return [
+        {
+            "email": s["email"],
+            "created_at": s["created_at"].isoformat() if isinstance(s["created_at"], datetime) else s["created_at"],
+            "expires_at": s["expires_at"].isoformat() if isinstance(s["expires_at"], datetime) else s["expires_at"],
+        }
+        for s in sessions
+    ]
 
 
 #first pydantic model
@@ -278,11 +316,11 @@ class student_data(BaseModel):
         "Networking", "Education", "Entertainment", "News"
     ]
 
-    Avg_Daily_Usage_Hours: float = Field(..., ge=0, le=24)
-    Daily_Unlocks: int = Field(..., ge=0)
-    Study_Hours: int = Field(..., ge=0, le=24)
+    Avg_Daily_Usage_Hours: float = Field(..., gt=0, le=24)
+    Daily_Unlocks: int = Field(..., gt=0)
+    Study_Hours: int = Field(..., gt=0, le=24)
     Physical_Activity_Hours: int = Field(..., ge=0, le=24)
-    Sleep_Hours_Per_Night: int = Field(..., ge=0, le=24)
+    Sleep_Hours_Per_Night: int = Field(..., gt=0, le=24)
 
     Stress_Level: Literal[
         "Low", "Medium", "High", "Very High"

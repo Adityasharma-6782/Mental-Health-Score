@@ -1,0 +1,17 @@
+# --- Secrets ---
+.env
+
+# --- Python ---
+__pycache__/
+*.pyc
+myenv/
+venv/
+env/
+*.egg-info/
+
+# --- Old JSON-file storage (now using MongoDB) ---
+data/
+
+# --- OS junk ---
+.DS_Store
+Thumbs.db

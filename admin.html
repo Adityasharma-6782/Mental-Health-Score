@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Mental Health Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="about.css" />
+<link rel="stylesheet" href="admin.css" />
+
+<script>
+  if (!localStorage.getItem('mhs_token')) {
+    window.location.replace('login.html');
+  } else {
+    // block non-admins before the page renders at all — no flash, no data fetch
+    const cachedUser = JSON.parse(localStorage.getItem('mhs_user') || 'null');
+    if (!cachedUser || !cachedUser.is_admin) {
+      window.location.replace('about.html');
+    }
+  }
+</script>
+</head>
+<body>
+
+<div class="noise-overlay" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="header-inner header-branding">
+    <div class="user-bar">
+      <nav class="site-nav">
+        <a href="about.html" class="nav-link">About</a>
+        <a href="index.html" class="nav-link">Predictor</a>
+      </nav>
+      <div class="user-bar-right">
+        <span class="user-greeting" id="user-greeting"></span>
+        <button type="button" class="logout-btn" id="logout-btn">Log out</button>
+      </div>
+    </div>
+    <div class="brand-logo">
+      <img src="logo.png" alt="Mental Health Signal logo" class="site-logo" />
+      <div>
+        <span class="eyebrow">Student Wellness Analytics</span>
+        <h1 class="title">Admin <em>Panel</em></h1>
+      </div>
+    </div>
+    <p class="subtitle">Registered users and active sessions.</p>
+  </div>
+</header>
+
+<main class="about-layout">
+
+  <div class="admin-banner" id="admin-banner" hidden></div>
+
+  <section class="panel about-panel" id="users-section" hidden>
+    <span class="about-eyebrow">Users</span>
+    <h2 class="about-heading" id="users-count">—</h2>
+
+    <div class="admin-table-wrap">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Joined</th>
+            <th>Role</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="users-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel about-panel" id="loading-section">
+    <p class="about-copy">Loading users…</p>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Admin access only. Deleting a user also revokes their active sessions.</p>
+</footer>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+
+  const storedUser = JSON.parse(localStorage.getItem('mhs_user') || 'null');
+  const greetingEl = document.getElementById('user-greeting');
+  if (greetingEl && storedUser) {
+    greetingEl.textContent = `Hi, ${storedUser.first_name}`;
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  logoutBtn.addEventListener('click', async () => {
+    const token = localStorage.getItem('mhs_token');
+    try {
+      await fetch(`${API_BASE}/logout`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+    } catch (err) {}
+    localStorage.removeItem('mhs_token');
+    localStorage.removeItem('mhs_user');
+    window.location.href = 'login.html';
+  });
+
+  const banner = document.getElementById('admin-banner');
+  const loadingSection = document.getElementById('loading-section');
+  const usersSection = document.getElementById('users-section');
+  const usersCount = document.getElementById('users-count');
+  const tbody = document.getElementById('users-tbody');
+
+  function showBanner(message) {
+    banner.textContent = message;
+    banner.hidden = false;
+  }
+
+  function fmtDate(iso) {
+    try {
+      return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+    } catch {
+      return iso;
+    }
+  }
+
+  async function loadUsers() {
+    const token = localStorage.getItem('mhs_token');
+    try {
+      const res = await fetch(`${API_BASE}/admin/users`, {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+
+      if (res.status === 403) {
+        showBanner("You don't have admin access. Redirecting…");
+        loadingSection.hidden = true;
+        setTimeout(() => { window.location.href = 'about.html'; }, 1500);
+        return;
+      }
+
+      if (res.status === 401) {
+        localStorage.removeItem('mhs_token');
+        localStorage.removeItem('mhs_user');
+        window.location.href = 'login.html';
+        return;
+      }
+
+      if (!res.ok) {
+        showBanner('Could not load users.');
+        loadingSection.hidden = true;
+        return;
+      }
+
+      const users = await res.json();
+      renderUsers(users);
+    } catch (err) {
+      showBanner('Could not reach the server.');
+      loadingSection.hidden = true;
+    }
+  }
+
+  function renderUsers(users) {
+    loadingSection.hidden = true;
+    usersSection.hidden = false;
+    usersCount.textContent = `${users.length} registered ${users.length === 1 ? 'user' : 'users'}`;
+
+    tbody.innerHTML = '';
+    users.forEach((u) => {
+      const tr = document.createElement('tr');
+
+      tr.innerHTML = `
+        <td>${u.first_name} ${u.last_name}</td>
+        <td>${u.email}</td>
+        <td>${fmtDate(u.created_at)}</td>
+        <td>${u.is_admin ? '<span class="admin-badge">Admin</span>' : 'User'}</td>
+        <td></td>
+      `;
+
+      const actionCell = tr.querySelector('td:last-child');
+      if (!u.is_admin) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'Delete';
+        delBtn.className = 'admin-delete-btn';
+        delBtn.addEventListener('click', () => deleteUser(u.id, u.email));
+        actionCell.appendChild(delBtn);
+      }
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  async function deleteUser(userId, email) {
+    if (!confirm(`Delete ${email}? This can't be undone.`)) return;
+    const token = localStorage.getItem('mhs_token');
+    try {
+      const res = await fetch(`${API_BASE}/admin/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        alert(body?.detail || 'Could not delete user.');
+        return;
+      }
+      loadUsers();
+    } catch (err) {
+      alert('Could not reach the server.');
+    }
+  }
+
+  loadUsers();
+</script>
+
+</body>
+</html>
