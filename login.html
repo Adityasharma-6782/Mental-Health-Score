@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sign in — Mental Health Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="auth.css" />
+</head>
+<body class="auth-body">
+
+<div class="noise-overlay" aria-hidden="true"></div>
+<img src="logo.png" alt="Mental Health Signal logo" class="auth-corner-logo" />
+
+<div class="auth-shell">
+
+  <!-- SIDE PANEL -->
+  <div class="auth-side">
+    <div>
+      <p class="auth-side-eyebrow">Student Wellness Analytics</p>
+      <h1 class="auth-side-title">Track the signal, <em>not just the noise</em></h1>
+      <p class="auth-side-copy">Sign in to pick up your wellness trend where you left off — your history stays private to you.</p>
+
+      <div class="auth-side-metrics">
+        <div class="auth-metric">
+          <span class="auth-metric-num">0–10</span>
+          <span class="auth-metric-label">Signal score range, modeled daily</span>
+        </div>
+        <div class="auth-metric">
+          <span class="auth-metric-num">6</span>
+          <span class="auth-metric-label">Habit inputs behind every read</span>
+        </div>
+      </div>
+    </div>
+    <p class="auth-side-foot">Informational only — not a clinical assessment.</p>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="auth-main">
+    <div class="auth-heading">
+      <span class="auth-eyebrow">Welcome back</span>
+      <h2 class="auth-title">Sign in to your <em>account</em></h2>
+      <p class="auth-subtitle">Enter your details to continue.</p>
+    </div>
+
+    <form class="auth-form" id="login-form" novalidate>
+      <div class="auth-banner" id="form-banner" hidden></div>
+
+      <div class="auth-field" id="field-email">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email" />
+        <span class="auth-error-msg">Enter a valid email address.</span>
+      </div>
+
+      <div class="auth-field" id="field-password">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" required placeholder="••••••••" autocomplete="current-password" />
+          <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <span class="auth-error-msg">Enter your password.</span>
+      </div>
+
+      <div class="auth-meta-row">
+        <label class="auth-check">
+          <input type="checkbox" name="remember" />
+          Remember me
+        </label>
+        <a href="#" class="auth-link">Forgot password?</a>
+      </div>
+
+      <button type="submit" class="auth-submit">Sign in</button>
+    </form>
+
+    <p class="auth-switch">Don't have an account? <a href="register.html" class="auth-link">Create one</a></p>
+  </div>
+
+</div>
+
+<script>
+  // ===== CONFIG =====
+  // Set this to your deployed backend URL (e.g. "https://your-api.onrender.com").
+  // Leave as "" if the frontend and backend are served from the same domain.
+  const API_BASE = "http://127.0.0.1:8000";
+
+  // password visibility toggle
+  document.querySelectorAll('.password-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      const isPw = input.type === 'password';
+      input.type = isPw ? 'text' : 'password';
+      btn.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    });
+  });
+
+  function setFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    field.classList.add('field-error');
+    const msg = field.querySelector('.auth-error-msg');
+    if (msg && message) msg.textContent = message;
+  }
+
+  function clearFieldError(fieldId) {
+    const field = document.getElementById(fieldId);
+    if (field) field.classList.remove('field-error');
+  }
+
+  function clearAllErrors() {
+    document.querySelectorAll('.auth-field').forEach(f => f.classList.remove('field-error'));
+    const banner = document.getElementById('form-banner');
+    if (banner) { banner.textContent = ''; banner.hidden = true; }
+  }
+
+  function showBanner(message) {
+    const banner = document.getElementById('form-banner');
+    if (banner) { banner.textContent = message; banner.hidden = false; }
+  }
+
+  const form = document.getElementById('login-form');
+  const submitBtn = form.querySelector('.auth-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAllErrors();
+
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+
+    let valid = true;
+    if (!email) { setFieldError('field-email', 'Email is required.'); valid = false; }
+    if (!password) { setFieldError('field-password', 'Enter your password.'); valid = false; }
+    if (!valid) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Signing in…';
+
+    try {
+      const res = await fetch(`${API_BASE}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.errors) {
+          Object.entries(result.errors).forEach(([field, msg]) => {
+            setFieldError(`field-${field.replace(/_/g, '-')}`, msg);
+          });
+        } else {
+          showBanner(result.detail || 'Something went wrong. Please try again.');
+        }
+        return;
+      }
+
+      localStorage.setItem('mhs_token', result.token);
+      localStorage.setItem('mhs_user', JSON.stringify(result.user));
+      window.location.href = 'about.html';
+
+    } catch (err) {
+      showBanner('Could not reach the server. Please try again.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Sign in';
+    }
+  });
+</script>
+
+</body>
+</html>

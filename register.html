@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Create account — Mental Health Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="auth.css" />
+</head>
+<body class="auth-body">
+
+<div class="noise-overlay" aria-hidden="true"></div>
+<img src="logo.png" alt="Mental Health Signal logo" class="auth-corner-logo" />
+
+<div class="auth-shell">
+
+  <!-- SIDE PANEL -->
+  <div class="auth-side">
+    <div>
+      <p class="auth-side-eyebrow">Student Wellness Analytics</p>
+      <h1 class="auth-side-title">A quick read on <em>how you're doing</em></h1>
+      <p class="auth-side-copy">Create an account to save your reads over time and see how small changes in habits shift your signal.</p>
+
+      <div class="auth-side-metrics">
+        <div class="auth-metric">
+          <span class="auth-metric-num">2 min</span>
+          <span class="auth-metric-label">To set up and get your first read</span>
+        </div>
+        <div class="auth-metric">
+          <span class="auth-metric-num">Private</span>
+          <span class="auth-metric-label">Your entries are visible only to you</span>
+        </div>
+      </div>
+    </div>
+    <p class="auth-side-foot">Informational only — not a clinical assessment.</p>
+  </div>
+
+  <!-- FORM PANEL -->
+  <div class="auth-main">
+    <div class="auth-heading">
+      <span class="auth-eyebrow">Get started</span>
+      <h2 class="auth-title">Create your <em>account</em></h2>
+      <p class="auth-subtitle">Takes about a minute.</p>
+    </div>
+
+    <form class="auth-form" id="register-form" novalidate>
+      <div class="auth-banner" id="form-banner" hidden></div>
+
+      <div class="auth-row-2">
+        <div class="auth-field" id="field-first-name">
+          <label for="first-name">First name</label>
+          <input type="text" id="first-name" name="first_name" required placeholder="Ananya" autocomplete="given-name" />
+          <span class="auth-error-msg">Required.</span>
+        </div>
+        <div class="auth-field" id="field-last-name">
+          <label for="last-name">Last name</label>
+          <input type="text" id="last-name" name="last_name" required placeholder="Sharma" autocomplete="family-name" />
+          <span class="auth-error-msg">Required.</span>
+        </div>
+      </div>
+
+      <div class="auth-field" id="field-email">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com" autocomplete="email" />
+        <span class="auth-error-msg">Enter a valid email address.</span>
+      </div>
+
+      <div class="auth-field" id="field-password">
+        <label for="password">Password</label>
+        <div class="password-wrap">
+          <input type="password" id="password" name="password" required placeholder="At least 8 characters" autocomplete="new-password" />
+          <button type="button" class="password-toggle" data-target="password" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <div class="auth-strength" id="strength-bars">
+          <span class="auth-strength-bar"></span>
+          <span class="auth-strength-bar"></span>
+          <span class="auth-strength-bar"></span>
+          <span class="auth-strength-bar"></span>
+        </div>
+        <span class="auth-strength-hint" id="strength-hint">Use 8+ characters with a mix of letters &amp; numbers.</span>
+        <span class="auth-error-msg">Password must be at least 8 characters.</span>
+      </div>
+
+      <div class="auth-field" id="field-confirm">
+        <label for="confirm-password">Confirm password</label>
+        <div class="password-wrap">
+          <input type="password" id="confirm-password" name="confirm_password" required placeholder="••••••••" autocomplete="new-password" />
+          <button type="button" class="password-toggle" data-target="confirm-password" aria-label="Show password">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          </button>
+        </div>
+        <span class="auth-error-msg">Passwords don't match.</span>
+      </div>
+
+      <label class="auth-check">
+        <input type="checkbox" id="terms" name="terms" required />
+        I agree to the <a href="#" class="auth-link">Terms</a> and <a href="#" class="auth-link">Privacy Policy</a>.
+      </label>
+
+      <button type="submit" class="auth-submit">Create account</button>
+    </form>
+
+    <p class="auth-switch">Already have an account? <a href="login.html" class="auth-link">Sign in</a></p>
+  </div>
+
+</div>
+
+<script>
+  // ===== CONFIG =====
+  // Set this to your deployed backend URL (e.g. "https://your-api.onrender.com").
+  // Leave as "" if the frontend and backend are served from the same domain.
+  const API_BASE = "http://127.0.0.1:8000";
+
+  // password visibility toggle
+  document.querySelectorAll('.password-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const input = document.getElementById(btn.dataset.target);
+      const isPw = input.type === 'password';
+      input.type = isPw ? 'text' : 'password';
+      btn.setAttribute('aria-label', isPw ? 'Hide password' : 'Show password');
+    });
+  });
+
+  // password strength meter
+  const pwInput = document.getElementById('password');
+  const bars = document.querySelectorAll('#strength-bars .auth-strength-bar');
+  const hint = document.getElementById('strength-hint');
+  const colors = ['var(--coral)', '#C97C3B', 'var(--amber)', 'var(--sage)'];
+  const labels = ['Too short', 'Weak', 'Good', 'Strong'];
+
+  pwInput.addEventListener('input', () => {
+    const v = pwInput.value;
+    let score = 0;
+    if (v.length >= 8) score++;
+    if (/[A-Z]/.test(v) && /[a-z]/.test(v)) score++;
+    if (/[0-9]/.test(v)) score++;
+    if (/[^A-Za-z0-9]/.test(v) && v.length >= 10) score++;
+    score = v.length === 0 ? 0 : Math.max(1, score);
+
+    bars.forEach((bar, i) => {
+      bar.style.background = i < score ? colors[score - 1] : 'var(--line)';
+    });
+    hint.textContent = v.length === 0
+      ? 'Use 8+ characters with a mix of letters & numbers.'
+      : labels[score - 1];
+  });
+
+  function setFieldError(fieldId, message) {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+    field.classList.add('field-error');
+    const msg = field.querySelector('.auth-error-msg');
+    if (msg && message) msg.textContent = message;
+  }
+
+  function clearAllErrors() {
+    document.querySelectorAll('.auth-field').forEach(f => f.classList.remove('field-error'));
+    const banner = document.getElementById('form-banner');
+    if (banner) { banner.textContent = ''; banner.hidden = true; }
+  }
+
+  function showBanner(message) {
+    const banner = document.getElementById('form-banner');
+    if (banner) { banner.textContent = message; banner.hidden = false; }
+  }
+
+  const form = document.getElementById('register-form');
+  const submitBtn = form.querySelector('.auth-submit');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    clearAllErrors();
+
+    const first_name = document.getElementById('first-name').value.trim();
+    const last_name = document.getElementById('last-name').value.trim();
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const confirm_password = document.getElementById('confirm-password').value;
+    const termsChecked = document.getElementById('terms').checked;
+
+    // client-side pre-checks (server re-validates everything too)
+    let valid = true;
+    if (!first_name) { setFieldError('field-first-name', 'Required.'); valid = false; }
+    if (!last_name) { setFieldError('field-last-name', 'Required.'); valid = false; }
+    if (!email) { setFieldError('field-email', 'Email is required.'); valid = false; }
+    if (password.length < 8) { setFieldError('field-password', 'Password must be at least 8 characters.'); valid = false; }
+    if (confirm_password !== password) { setFieldError('field-confirm', "Passwords don't match."); valid = false; }
+    if (!termsChecked) { showBanner('Please accept the Terms and Privacy Policy to continue.'); valid = false; }
+    if (!valid) return;
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Creating account…';
+
+    try {
+      const res = await fetch(`${API_BASE}/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ first_name, last_name, email, password, confirm_password }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (result.errors) {
+          Object.entries(result.errors).forEach(([field, msg]) => {
+            const mapped = field === 'confirm_password' ? 'confirm' : field.replace(/_/g, '-');
+            setFieldError(`field-${mapped}`, msg);
+          });
+        } else {
+          showBanner(result.detail || 'Something went wrong. Please try again.');
+        }
+        return;
+      }
+
+      localStorage.setItem('mhs_token', result.token);
+      localStorage.setItem('mhs_user', JSON.stringify(result.user));
+      window.location.href = 'about.html';
+
+    } catch (err) {
+      showBanner('Could not reach the server. Please try again.');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Create account';
+    }
+  });
+</script>
+
+</body>
+</html>

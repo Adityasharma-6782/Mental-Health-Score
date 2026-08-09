@@ -102,6 +102,58 @@ body {
   gap: 22px;
 }
 
+.user-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: -4px;
+}
+
+.user-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.site-nav {
+  display: flex;
+  gap: 6px;
+}
+
+.nav-link {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  text-decoration: none;
+  padding: 6px 13px;
+  border-radius: 100px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.nav-link:hover { background: var(--paper-deep); color: var(--ink); }
+.nav-link.active { background: var(--pine); color: #fff; }
+
+.user-greeting {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-soft);
+}
+
+.logout-btn {
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--pine);
+  background: var(--pine-tint);
+  border: none;
+  border-radius: 100px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+.logout-btn:hover { background: #D5E5DC; }
+
 .brand-logo {
   display: flex;
   align-items: center;
@@ -122,7 +174,7 @@ body {
   max-width: 560px;
   font-size: 16px;
   color: var(--ink-soft);
-  margin: 0;
+  margin: 25px;
 }
 
 /* =========================================================

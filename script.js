@@ -1,7 +1,7 @@
 (() => {
   "use strict";
 
-  const API_BASE = "https://mental-health-score-8vog.onrender.com";
+  const API_BASE = "http://127.0.0.1:8000";
 
   const form = document.getElementById("predict-form");
   const submitBtn = document.getElementById("submit-btn");
@@ -278,12 +278,24 @@
     setSubmitting(true);
     showState("loading");
 
+    const token = localStorage.getItem("mhs_token");
+
     try {
       const res = await fetch(`${API_BASE}/predict`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(toApiPayload(payload)),
       });
+
+      if (res.status === 401) {
+        localStorage.removeItem("mhs_token");
+        localStorage.removeItem("mhs_user");
+        window.location.href = "login.html";
+        return;
+      }
 
       if (res.status === 422) {
         const body = await res.json().catch(() => null);

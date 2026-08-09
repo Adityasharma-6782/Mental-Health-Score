@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>About — Mental Health Signal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="about.css" />
+
+<script>
+  // ---- Auth guard: redirect to login if not signed in ----
+  if (!localStorage.getItem('mhs_token')) {
+    window.location.replace('login.html');
+  }
+</script>
+</head>
+<body>
+
+<div class="noise-overlay" aria-hidden="true"></div>
+
+<header class="site-header">
+  <div class="header-inner header-branding">
+    <div class="user-bar">
+      <nav class="site-nav">
+        <a href="about.html" class="nav-link active">About</a>
+        <a href="index.html" class="nav-link">Predictor</a>
+      </nav>
+      <div class="user-bar-right">
+        <span class="user-greeting" id="user-greeting"></span>
+        <button type="button" class="logout-btn" id="logout-btn">Log out</button>
+      </div>
+    </div>
+    <div class="brand-logo">
+      <img src="logo.png" alt="Mental Health Signal logo" class="site-logo" />
+      <div>
+        <span class="eyebrow">Student Wellness Analytics</span>
+        <h1 class="title">About <em>Signal</em></h1>
+      </div>
+    </div>
+    <p class="subtitle">What this tool does, how the score is modeled, and where it stops.</p>
+  </div>
+</header>
+
+<main class="about-layout">
+
+  <section class="panel about-panel">
+    <span class="about-eyebrow">01 · Why we built this</span>
+    <h2 class="about-heading">A quick, honest read on how you're doing</h2>
+    <p class="about-copy">
+      Students juggle screen time, coursework, sleep, and stress every single day — and most of us never
+      stop to look at how those pieces fit together. Mental Health Signal takes a handful of everyday
+      habits and turns them into a single, easy-to-read score, so you can notice patterns before they
+      turn into something bigger.
+    </p>
+  </section>
+
+  <section class="panel about-panel">
+    <span class="about-eyebrow">02 · How the score works</span>
+    <h2 class="about-heading">Twelve inputs, one signal</h2>
+    <p class="about-copy">
+      The model looks at your age, academic level, and country alongside your digital habits — screen
+      time, phone unlocks, platform, and purpose of use — plus your lifestyle basics: study hours, physical
+      activity, sleep, and how stressed you feel day to day. These are fed into a trained model that
+      outputs a score from 0 to 10.
+    </p>
+    <div class="about-steps">
+      <div class="about-step">
+        <span class="about-step-num">1</span>
+        <div>
+          <p class="about-step-title">You fill in your profile &amp; habits</p>
+          <p class="about-step-copy">A short form covering academics, digital habits, and lifestyle.</p>
+        </div>
+      </div>
+      <div class="about-step">
+        <span class="about-step-num">2</span>
+        <div>
+          <p class="about-step-title">The model reads the pattern</p>
+          <p class="about-step-copy">Your inputs are compared against patterns learned from real survey data.</p>
+        </div>
+      </div>
+      <div class="about-step">
+        <span class="about-step-num">3</span>
+        <div>
+          <p class="about-step-title">You get a score, instantly</p>
+          <p class="about-step-copy">A 0–10 read plus a plain-language band: strained, balanced, or strong.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel about-panel">
+    <span class="about-eyebrow">03 · What this isn't</span>
+    <h2 class="about-heading">Not a diagnosis — a mirror</h2>
+    <p class="about-copy">
+      This score is modeled from statistical patterns, not clinical evaluation. It can't detect specific
+      conditions and it isn't a substitute for talking to a doctor, counselor, or therapist. Think of it as
+      a nudge to pay attention, not a verdict.
+    </p>
+  </section>
+
+  <section class="panel about-panel">
+    <span class="about-eyebrow">04 · Your data</span>
+    <h2 class="about-heading">Private by default</h2>
+    <p class="about-copy">
+      Your account and submissions are tied only to you. We don't sell or share your data, and you're free
+      to stop using the tool at any time.
+    </p>
+  </section>
+
+  <section class="panel about-panel cta-panel">
+    <h2 class="cta-heading">Ready to check your signal?</h2>
+    <p class="cta-copy">Takes about two minutes.</p>
+    <a href="index.html" class="cta-btn">Go to the predictor →</a>
+  </section>
+
+</main>
+
+<footer class="site-footer">
+  <p>Built for informational purposes only — this is not a clinical assessment. If you're struggling, please talk to someone you trust.</p>
+</footer>
+
+<script>
+  const API_BASE = "http://127.0.0.1:8000";
+
+  const storedUser = JSON.parse(localStorage.getItem('mhs_user') || 'null');
+  const greetingEl = document.getElementById('user-greeting');
+  if (greetingEl && storedUser) {
+    greetingEl.textContent = `Hi, ${storedUser.first_name}`;
+  }
+
+  const logoutBtn = document.getElementById('logout-btn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      const token = localStorage.getItem('mhs_token');
+      try {
+        await fetch(`${API_BASE}/logout`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+      } catch (err) {
+        // proceed with local logout even if the request fails
+      }
+      localStorage.removeItem('mhs_token');
+      localStorage.removeItem('mhs_user');
+      window.location.href = 'login.html';
+    });
+  }
+</script>
+
+</body>
+</html>
