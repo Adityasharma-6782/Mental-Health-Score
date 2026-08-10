@@ -32,7 +32,7 @@ model = joblib.load('Mental_Health_Model.pkl')
 
 # =========================================================
 # AUTH SETUP — MongoDB
-# =========================================================
+# =======================================================
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 MONGODB_DB_NAME = os.getenv("MONGODB_DB_NAME", "mental_health_signal")
 SESSION_LIFETIME_DAYS = 7
